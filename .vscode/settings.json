@@ -1,0 +1,7 @@
+{
+    "azure-iot-edge.defaultPlatform": {
+        "platform": "amd64",
+        "alias": null
+    },
+    "azure-iot-edge.version.default.edgeRuntime": "1.2"
+}
