@@ -1,5 +1,7 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster-arm64v8 AS build-env
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build-env
 WORKDIR /app
+
+LABEL org.opencontainers.image.source https://github.com/ReneHezser/Edge-Filter-Blob-Solution
 
 COPY *.csproj ./
 RUN dotnet restore
@@ -7,7 +9,7 @@ RUN dotnet restore
 COPY . ./
 RUN dotnet publish -c Release -o out
 
-FROM mcr.microsoft.com/dotnet/core/runtime:3.1-buster-slim-arm64v8
+FROM mcr.microsoft.com/dotnet/core/runtime:3.1-buster-slim
 WORKDIR /app
 COPY --from=build-env /app/out ./
 
