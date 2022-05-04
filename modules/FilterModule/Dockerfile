@@ -2,6 +2,7 @@ FROM mcr.microsoft.com/dotnet/core/sdk:3.1-buster AS build-env
 WORKDIR /app
 
 LABEL org.opencontainers.image.source https://github.com/ReneHezser/Edge-Filter-Blob-Solution
+LABEL org.opencontainers.image.description An IoT Edge module that filters ingested data and routes to a blob storage account (which can be an IoT Edge module as well)
 
 COPY *.csproj ./
 RUN dotnet restore

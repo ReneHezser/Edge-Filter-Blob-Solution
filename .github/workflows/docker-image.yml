@@ -15,6 +15,16 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    # find the version
+    - name: JSON to variables
+      uses: antifree/json-to-variables@v1.0.1
+      with:
+        filename: './modules/FilterModule/module.json'
+        prefix: module
+    - name: Show output
+      run: echo "The module version is ${{ env.module_image_tag_version }}"
+
+    # build and push images
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
     - name: Set up Docker Buildx
@@ -40,6 +50,6 @@ jobs:
         platforms: linux/amd64 #,linux/arm64,linux/arm/v7
         push: true
         tags: |
-          ghcr.io/renehezser/edge-filter-blob-solution/filtermodule:${{ github.run_number }}
-          ghcr.io/renehezser/edge-filter-blob-solution/filtermodule:1.0.0-amd64
+          ghcr.io/renehezser/edge-filter-blob-solution/filtermodule:${{ env.module_image_tag_version }}
+          ghcr.io/renehezser/edge-filter-blob-solution/filtermodule:${{ env.module_image_tag_version }}-amd64
           ghcr.io/renehezser/edge-filter-blob-solution/filtermodule:latest

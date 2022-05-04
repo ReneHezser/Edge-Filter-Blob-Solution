@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/dotnet/core/runtime:3.1-buster-slim AS base
 
+LABEL org.opencontainers.image.source https://github.com/ReneHezser/Edge-Filter-Blob-Solution
+LABEL org.opencontainers.image.description An IoT Edge module that filters ingested data and routes to a blob storage account (which can be an IoT Edge module as well)
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends unzip procps && \
     rm -rf /var/lib/apt/lists/*
