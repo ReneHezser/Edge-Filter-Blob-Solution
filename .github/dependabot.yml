@@ -4,13 +4,21 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: daily
     open-pull-requests-limit: 10
     assignees:
       - "renehezser"
 
   - package-ecosystem: docker
-    directory: "/"
+    directory: /modules/FilterModule
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    assignees:
+      - "renehezser"
+
+  - package-ecosystem: nuget
+    directory: /modules/FilterModule
     schedule:
       interval: daily
     open-pull-requests-limit: 10
