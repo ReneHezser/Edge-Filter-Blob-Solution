@@ -9,7 +9,8 @@ on:
 jobs:
 
   build:
-    if: github.actor!= 'dependabot-preview[bot]'   # ignore the pull request which comes from user depbot.
+    # ignore the pull request which comes from user depbot
+    if: ${{ github.actor != "dependabot[bot]" }}
     runs-on: ubuntu-latest
 
     steps:
