@@ -9,9 +9,8 @@ on:
 jobs:
 
   build:
-    # ignore the pull request which comes from user depbot
-    if: ${{ github.actor != "dependabot[bot]" }}
     runs-on: ubuntu-latest
+    if: ${{ github.actor != 'dependabot[bot]' }}
 
     steps:
     - uses: actions/checkout@v3
