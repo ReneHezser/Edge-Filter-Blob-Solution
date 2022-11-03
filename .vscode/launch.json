@@ -28,7 +28,7 @@
       "name": "FilterModule Local Debug (.NET Core)",
       "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceRoot}/modules/FilterModule/bin/Debug/netcoreapp3.1/FilterModule.dll",
+      "program": "${workspaceRoot}/modules/FilterModule/bin/Debug/net6.0/FilterModule.dll",
       "args": [],
       "cwd": "${workspaceRoot}/modules/FilterModule",
       "internalConsoleOptions": "openOnSessionStart",
