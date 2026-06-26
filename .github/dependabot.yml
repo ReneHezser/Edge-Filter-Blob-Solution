@@ -5,6 +5,10 @@ updates:
     directory: "/"
     schedule:
       interval: daily
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     assignees:
       - "renehezser"
@@ -13,6 +17,10 @@ updates:
     directory: /modules/FilterModule
     schedule:
       interval: daily
+    groups:
+      docker-dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     assignees:
       - "renehezser"
@@ -21,6 +29,10 @@ updates:
     directory: /modules/FilterModule
     schedule:
       interval: daily
+    groups:
+      nuget-dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
     assignees:
       - "renehezser"
