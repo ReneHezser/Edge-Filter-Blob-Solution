@@ -1,11 +1,13 @@
 using Azure.Storage.Blobs;
 using System;
+using System.Collections.Generic;
 using System.Runtime.Loader;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Client.Transport.Mqtt;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace FilterModule
@@ -16,6 +18,12 @@ namespace FilterModule
         static string containerName = "edge";
         static BlobContainerClient containerClient;
 
+        static int groupSize;
+        static readonly List<JObject> messageBuffer = new List<JObject>();
+        static readonly SemaphoreSlim bufferLock = new SemaphoreSlim(1, 1);
+        static readonly SemaphoreSlim flushLock = new SemaphoreSlim(1, 1);
+        static Timer flushTimer;
+
         static void Main(string[] args)
         {
             Init().Wait();
@@ -25,6 +33,10 @@ namespace FilterModule
             AssemblyLoadContext.Default.Unloading += (ctx) => cts.Cancel();
             Console.CancelKeyPress += (sender, cpe) => cts.Cancel();
             WhenCancelled(cts.Token).Wait();
+
+            // Flush remaining messages and clean up on shutdown
+            flushTimer?.Dispose();
+            FlushBufferAsync(force: true).Wait();
         }
 
         /// <summary>
@@ -46,6 +58,16 @@ namespace FilterModule
             try
             {
                 await ConnectToStorage();
+
+                groupSize = int.TryParse(Environment.GetEnvironmentVariable("GroupSize"), out int gs) && gs > 0 ? gs : 10;
+                Console.WriteLine($"Group size set to {groupSize}.");
+
+                // Flush any buffered messages every 60 seconds regardless of group size
+                flushTimer = new Timer(_ =>
+                    FlushBufferAsync(force: true).ContinueWith(
+                        t => Console.WriteLine($"Error in timer-based flush: {t.Exception}"),
+                        TaskContinuationOptions.OnlyOnFaulted),
+                    null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
 
                 MqttTransportSettings mqttSetting = new MqttTransportSettings(TransportType.Mqtt_WebSocket_Only);
                 ITransportSettings[] settings = { mqttSetting };
@@ -119,11 +141,8 @@ namespace FilterModule
         }
 
         /// <summary>
-        /// Upload the message as blob
+        /// Buffers the message and flushes to blob storage once the group size is reached.
         /// </summary>
-        /// <param name="messageString"></param>
-        /// <param name="messageBytes"></param>
-        /// <returns></returns>
         private static async Task UploadBlob(string messageString, byte[] messageBytes)
         {
             try
@@ -132,20 +151,75 @@ namespace FilterModule
                 JObject json = (JObject)JObject.Parse(messageString);
                 if (json["machine"]?["temperature"]?.Value<float>() > 25.0)
                 {
-                    // use the timestamp as filename
-                    var filename = ((DateTime)json["timeCreated"]?.Value<DateTime?>()).ToString("o", System.Globalization.CultureInfo.InvariantCulture).Replace(':', '_') + ".json";
-                    Console.WriteLine($"Uploading blob '{filename}");
-                    var binaryData = new BinaryData(messageBytes);
+                    await bufferLock.WaitAsync();
+                    try
+                    {
+                        messageBuffer.Add(json);
+                        Console.WriteLine($"Message buffered. Buffer size: {messageBuffer.Count}/{groupSize}.");
+                    }
+                    finally
+                    {
+                        bufferLock.Release();
+                    }
+
+                    await FlushBufferAsync(force: false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error buffering message: {ex.ToString()}");
+            }
+        }
+
+        /// <summary>
+        /// Uploads buffered messages as a single JSON array blob when the group size is reached,
+        /// or when <paramref name="force"/> is true and the buffer is non-empty.
+        /// </summary>
+        private static async Task FlushBufferAsync(bool force)
+        {
+            // Only one flush upload should run at a time
+            if (!await flushLock.WaitAsync(0))
+                return;
+
+            try
+            {
+                List<JObject> batch = null;
+                DateTime batchTime = DateTime.UtcNow;
+
+                await bufferLock.WaitAsync();
+                try
+                {
+                    if (messageBuffer.Count > 0 && (force || messageBuffer.Count >= groupSize))
+                    {
+                        batch = new List<JObject>(messageBuffer);
+                        messageBuffer.Clear();
+                    }
+                }
+                finally
+                {
+                    bufferLock.Release();
+                }
+
+                if (batch == null)
+                    return;
+
+                try
+                {
+                    var filename = batchTime.ToString("o", System.Globalization.CultureInfo.InvariantCulture).Replace(':', '_') + ".json";
+                    Console.WriteLine($"Uploading grouped blob '{filename}' with {batch.Count} message(s).");
+                    var binaryData = new BinaryData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(batch)));
                     var blobClient = containerClient.GetBlobClient(filename);
                     // create a new blob without overwriting existing blobs
                     await blobClient.UploadAsync(binaryData, false);
                 }
-
-                await Task.CompletedTask;
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error uploading grouped blob to Blob Storage: {ex.ToString()}");
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Console.WriteLine($"Error uploading to Blob Storage: {ex.ToString()}");
+                flushLock.Release();
             }
         }
     }

@@ -57,6 +57,9 @@
                         "env": {
                             "StorageAccountConnectionString": {
                                 "value": "DefaultEndpointsProtocol=http;BlobEndpoint=http://blobstorage:11002/localstorage;AccountName=localstorage;AccountKey=${EDGE_STORAGE_ACCOUNT_KEY};"
+                            },
+                            "GroupSize": {
+                                "value": "10"
                             }
                         }
                     },
